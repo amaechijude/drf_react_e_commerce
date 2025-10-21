@@ -42,12 +42,15 @@ INSTALLED_APPS = [
 
     # Third party package
     'rest_framework',
+    "corsheaders",
+    'rest_framework_simplejwt',
 
     #custom
     'core',
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -56,7 +59,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+# CORS_ALLOW_ALL_ORIGINS: bool = True
 ROOT_URLCONF = 'zconfig.urls'
 
 TEMPLATES = [
@@ -106,6 +109,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
+# Simple JWT Authentication Config
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

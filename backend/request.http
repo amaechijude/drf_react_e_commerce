@@ -1,0 +1,23 @@
+@ecommer_HostAddress = http://127.0.0.1:8000/api
+
+
+POST {{ecommer_HostAddress}}/user/create
+Content-Type: application/json
+
+{
+	"email": "simon@unn.edu.ng",
+	"password": "Password1@",
+	"confirm_password": "Password1@"
+}
+###
+
+POST {{ecommer_HostAddress}}/token/
+Content-Type: application/json
+
+{
+	"email": "chioma@unn.edu.ng",
+	"password": "Password1@"
+}
+###
+GET {{ecommer_HostAddress}}/user/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYxMDUyNDM3LCJpYXQiOjE3NjEwNTIxMzcsImp0aSI6IjRkYzFjNDJhODc1MzQ0Mjg5MTIzNWZlYjMxZWQ5OTM0IiwidXNlcl9pZCI6ImYwZTFjN2FkLTM1NWEtNDdjMi04NDIwLTE2Y2M5OTE4OGNmZSJ9.SRzp8GxICa9HkgLeFzfEhL80P0DQyovRTbs6ry4OslQ
