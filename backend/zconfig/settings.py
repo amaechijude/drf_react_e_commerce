@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+from datetime import timedelta
 import os
 from pathlib import Path
 from decouple import config
@@ -110,11 +111,21 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Simple JWT Authentication Config
+# Rest Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    )
+}
+
+# Simple JWT Authentication Config
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=20),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "UPDATE_LAST_LOGIN": True,
+    
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
 }
 
 # Internationalization
@@ -143,3 +154,22 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'core.CustomUser'
+
+
+# Papercut local email backend for development
+EMAIL_BACKEND = config('EMAIL_BACKEND')
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = config('EMAIL_PORT', cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
+# EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+# EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+
+
+# Django Resized settings
+DJANGO_RESIZED_DEFAULT_SIZE = [300, 300]
+DJANGO_RESIZED_DEFAULT_QUALITY = 85
+DJANGO_RESIZED_DEFAULT_KEEP_META = False
+DJANGO_RESIZED_DEFAULT_FORCE_FORMAT = 'AVIF'
+# DJANGO_RESIZED_DEFAULT_FORMAT_EXTENSIONS = {'JPEG': ".jpg"}
+# DJANGO_RESIZED_DEFAULT_NORMALIZE_ROTATION = True

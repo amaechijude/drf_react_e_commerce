@@ -2,6 +2,8 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
+from django_resized import ResizedImageField
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email:str, password=None, **extra_fields):
         if not email:
@@ -57,13 +59,86 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             models.Index(fields=["email"])
         ]
 
+class ShippingAddress(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    first_name = models.CharField(max_length=150, blank=False)
+    last_name = models.CharField(max_length=150, blank=False)
+    phone = models.CharField(max_length=13, help_text="+234")
+    address = models.CharField(max_length=150, blank=False)
+    country = models.CharField(max_length=100)
+    state = models.CharField(max_length=150)
+    lga = models.CharField(max_length=150)
+    zip_code = models.CharField(max_length=10)
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
+    def __str__(self) -> str:
+        return f"{self.user.email} -> {self.full_name}" # type: ignore
+    
+    class Meta:
+        verbose_name_plural = "Shipping Addresses"
+        db_table = "shipping_addresses"
+
+        indexes = [
+            models.Index(fields=["id"])
+        ]
+
+class CartItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    product_id = models.UUIDField()
+    quantity = models.PositiveIntegerField(default=1)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"CartItem: {self.product_id} for {self.user.email}" # type: ignore
+    
+    class Meta:
+        verbose_name_plural = "Cart Items"
+        db_table = "cart_items"
+
+        indexes = [
+            models.Index(fields=["id"])
+        ]
+####### order ###################
+class Order(models.Model):
+    class Status(models.TextChoices):
+        Processing = 'Processing', 'Processing'
+        Successful = 'Successful', 'Successful'
+        Cancelled = 'Cancelled', 'Cancelled'
+        Delivered = 'Delivered', 'Delivered'
+
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    shipp_addr = models.ForeignKey(ShippingAddress, on_delete=models.SET_NULL, null=True)
+    status = models.CharField(max_length=12, choices=Status, default=Status.Processing)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    payment_refrence = models.CharField(max_length=50, default=f"{uuid.uuid4}", unique=True, editable=False, blank=False)
+    transaction_refrence = models.CharField(max_length=300, blank=True)
+
+    def __str__(self) -> str:
+        return f"Ordered by {self.user.email} -- on {self.created_at}" # type: ignore
+    class Meta:
+        verbose_name = "Order"
+        verbose_name_plural = "Orders"
+        db_table = "orders"
+
+        indexes = [
+            models.Index(fields=["id"])
+        ]
+
+
+
 DIAMOND_THRESHOLD = 9_999_999_999
 
 class Vendor(models.Model):
     id = models.CharField(primary_key=True, default=f"vend-{uuid.uuid4()}", editable=False, max_length=50)
     email = models.EmailField(unique=True)
     brand_name = models.CharField(max_length=128)
-    avatar = models.ImageField(upload_to="venders", null=True, blank=True)
+    avatar = ResizedImageField(quality=75, size=[50, 50], upload_to="venders", null=True, blank=True)
     is_activated = models.BooleanField(default=False)
 
     total_sales_ever = models.DecimalField(max_digits=20, decimal_places=2)
@@ -96,7 +171,7 @@ class Product(models.Model):
     is_on_flash_sales = models.BooleanField(default=False)
     current_price = models.DecimalField(max_digits=18, decimal_places=2)
     old_price = models.DecimalField(max_digits=18, decimal_places=2)
-    thumbnail = models.ImageField(null=False, blank=False, upload_to="products")
+    thumbnail = ResizedImageField(null=False, blank=False, upload_to="products")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
