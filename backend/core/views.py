@@ -2,26 +2,31 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from core.permissions import IsVendor
-from core.serializers import RegisterSerializer
+from core.serializers import RegisterSerializer, VendorSerializer
 
 
 @api_view(["POST"])
 def register_user(request) -> Response:
     user_serializer = RegisterSerializer(data=request.data)
     if user_serializer.is_valid(raise_exception=True):
-        user = user_serializer.save()
-        return Response(RegisterSerializer(user).data, status=status.HTTP_201_CREATED)
-    
+        user_serializer.save()
+        return Response(user_serializer.data, status=status.HTTP_201_CREATED)
+
     return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def get_user(request) -> Response:
-    return Response(RegisterSerializer(request.user).data, status=status.HTTP_200_OK)
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated, IsVendor])
-def vendor_only_view(request) -> Response:
-    return Response({"message": "Welcome, vendor!"}, status=status.HTTP_200_OK)
+def become_vendor(request) -> Response:
+    user = request.user
+    if user.is_vendor:
+        return Response({"error": "Already a vendor"}, status=status.HTTP_403_FORBIDDEN)
+    vendor_serializer = VendorSerializer(request.data)
+    if vendor_serializer.is_valid():
+        vendor = vendor_serializer.save(user=user)
+        vendor.activate() # type: ignore
+        vendor.save() # type: ignore
+        
+        return Response({"message": "Congratulations"}, status=status.HTTP_201_CREATED)
+    
+    return Response(vendor_serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -2,6 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework.validators import UniqueValidator
 
+from core.models import Product, Vendor
+
 User = get_user_model()
 
 class RegisterSerializer(serializers.Serializer):
@@ -12,11 +14,6 @@ class RegisterSerializer(serializers.Serializer):
         )
     password = serializers.CharField(write_only=True, required=True)
     confirm_password = serializers.CharField(write_only=True, required=True)
-
-    def validate_email(self, value):
-        if not str(value).strip().endswith("@unn.edu.ng"):
-            raise serializers.ValidationError("You are not a unn student")
-        return value
     
     def validate(self, attrs):
         password1 = attrs["password"]
@@ -50,3 +47,16 @@ class RegisterSerializer(serializers.Serializer):
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
     
+class VendorSerializer(serializers.ModelSerializer):
+    avatar = serializers.ImageField(required=False, allow_null=True)
+    class Meta:
+        model = Vendor
+        fields = "__all__"
+        read_only_fields = ["id", "is_vendor", "is_activated", "user", "created_at", "updated_at", "total_sales_ever"]
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = "__all__"
+        read_only_fields = ["id", "vendor", "created_at", "updated_at"]
