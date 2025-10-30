@@ -8,6 +8,8 @@ from django.contrib.auth.models import (
 
 from django_resized import ResizedImageField
 
+def gen_payment_ref():
+    return f"TXN-{uuid.uuid4()}"
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email: str, password=None, **extra_fields):
@@ -97,17 +99,17 @@ class Vendor(models.Model):
     """
 
     id = models.CharField(
-        primary_key=True, default=f"vend-{uuid.uuid4()}", editable=False, max_length=50
+        primary_key=True, default=f"vend-{uuid.uuid4}", editable=False, max_length=50
     )
     user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
     email = models.EmailField(unique=True)
     brand_name = models.CharField(max_length=128)
     avatar = ResizedImageField(
-        quality=75, size=[50, 50], upload_to="venders", null=True, blank=True
+        quality=75, size=[50, 50], upload_to="venders"
     )
     is_activated = models.BooleanField(default=False)
 
-    total_sales_ever = models.DecimalField(max_digits=20, decimal_places=2)
+    total_sales_ever = models.DecimalField(max_digits=20, decimal_places=2, default=0.00) # type: ignore
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -133,11 +135,10 @@ class Vendor(models.Model):
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE)
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="vendor")
     name = models.CharField(max_length=128)
     stock = models.PositiveIntegerField(default=0)
     description = models.TextField()
-    brand = models.ForeignKey(Vendor, on_delete=models.CASCADE)
     is_on_flash_sales = models.BooleanField(default=False)
     current_price = models.DecimalField(max_digits=18, decimal_places=2)
     old_price = models.DecimalField(max_digits=18, decimal_places=2)
@@ -250,7 +251,7 @@ class Order(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
     payment_refrence = models.CharField(
         max_length=50,
-        default=f"TXN-{uuid.uuid4}",
+        default=gen_payment_ref,
         unique=True,
         editable=False,
         blank=False,

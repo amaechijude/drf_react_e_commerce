@@ -48,11 +48,20 @@ class RegisterSerializer(serializers.Serializer):
         return User.objects.create_user(**validated_data)
     
 class VendorSerializer(serializers.ModelSerializer):
-    avatar = serializers.ImageField(required=False, allow_null=True)
     class Meta:
         model = Vendor
         fields = "__all__"
         read_only_fields = ["id", "is_vendor", "is_activated", "user", "created_at", "updated_at", "total_sales_ever"]
+    
+    def validate_avatar(self, value):
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Image size cannot exceed 5MB")
+        
+        # Check file extension
+        if not value.name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+            raise serializers.ValidationError("Only PNG, JPG, JPEG, and GIF files are allowed")
+        return value
+
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -60,3 +69,8 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = "__all__"
         read_only_fields = ["id", "vendor", "created_at", "updated_at"]
+    
+    def validate_stock(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Stock count cannot be less than one")
+        return value
