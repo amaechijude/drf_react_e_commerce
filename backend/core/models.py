@@ -191,7 +191,7 @@ class CartItem(models.Model):
 
 class Cart(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     cart_items = models.ManyToManyField(CartItem, related_name="carts")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -236,6 +236,7 @@ class OrderItem(models.Model):
 ####### order ###################
 class Order(models.Model):
     class Status(models.TextChoices):
+        Pending = "Pending", "Pending"
         Processing = "Processing", "Processing"
         Successful = "Successful", "Successful"
         Cancelled = "Cancelled", "Cancelled"
@@ -246,7 +247,7 @@ class Order(models.Model):
     shipp_addr = models.ForeignKey(
         ShippingAddress, on_delete=models.SET_NULL, null=True
     )
-    status = models.CharField(max_length=12, choices=Status, default=Status.Processing)
+    status = models.CharField(max_length=12, choices=Status, default=Status.Pending)
     order_items = models.ManyToManyField(OrderItem, related_name="orders")
     amount = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
     payment_refrence = models.CharField(

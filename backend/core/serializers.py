@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework.validators import UniqueValidator
 
-from core.models import Product, Vendor
+from core.models import Cart, CartItem, Order, OrderItem, Product, ShippingAddress, Vendor
 
 User = get_user_model()
 
@@ -74,3 +74,53 @@ class ProductSerializer(serializers.ModelSerializer):
         if value < 1:
             raise serializers.ValidationError("Stock count cannot be less than one")
         return value
+
+
+class ShippingAddressSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    class Meta:
+        model = ShippingAddress
+        fields = "__all__"
+        read_only_fields = ["id", "user"]
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_price = serializers.DecimalField(source='product.current_price', max_digits=18, decimal_places=2, read_only=True)
+    product_thumbnail = serializers.ImageField(source='product.thumbnail', read_only=True)
+
+    class Meta:
+        model = CartItem
+        fields = ["id", "product", "product_name", "product_price", "product_thumbnail", "quantity", "sub_total", "added_at"]
+        read_only_fields = ["id", "user", "added_at", "sub_total"]
+
+
+class CartSerializer(serializers.ModelSerializer):
+    cart_items = CartItemSerializer(many=True, read_only=True)
+    total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = Cart
+        fields = ["id", "user", "cart_items", "total_price", "created_at", "updated_at"]
+        read_only_fields = ["id", "user", "created_at", "updated_at", "total_price"]
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_thumbnail = serializers.ImageField(source='product.thumbnail', read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ["id", "product", "product_name", "product_thumbnail", "quantity", "price_per_item", "sub_total"]
+        read_only_fields = ["id", "sub_total"]
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    order_items = OrderItemSerializer(many=True, read_only=True)
+    shipp_addr_details = ShippingAddressSerializer(source='shipp_addr', read_only=True)
+    total_amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ["id", "user", "shipp_addr", "shipp_addr_details", "status", "order_items", "amount", "payment_refrence", "transaction_refrence", "created_at", "updated_at", "total_amount"]
+        read_only_fields = ["id", "user", "amount", "created_at", "updated_at", "total_amount"]
