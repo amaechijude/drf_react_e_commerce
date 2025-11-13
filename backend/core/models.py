@@ -1,3 +1,4 @@
+import datetime
 import uuid
 from django.db import models
 from django.contrib.auth.models import (
@@ -9,7 +10,7 @@ from django.contrib.auth.models import (
 from django_resized import ResizedImageField
 
 def gen_payment_ref():
-    return f"TXN-{uuid.uuid4()}"
+    return f"TXN-{datetime.datetime.now()}-{uuid.uuid4()}"
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email: str, password=None, **extra_fields):
@@ -301,6 +302,7 @@ class Payment(models.Model):
     order = models.OneToOneField(
         Order, on_delete=models.CASCADE, related_name="payments"
     )
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     payment_method = models.CharField(
         max_length=50, choices=Payment_Method.choices, blank=True
@@ -308,7 +310,7 @@ class Payment(models.Model):
     payment_status = models.CharField(
         max_length=50, choices=Payment_Status.choices, default=Payment_Status.Initiated
     )
-    transaction_refrence = models.CharField(
+    paystack_refrence = models.CharField(
         max_length=300, unique=True, editable=False, blank=True
     )
     is_verified = models.BooleanField(default=False)
@@ -317,10 +319,17 @@ class Payment(models.Model):
 
     def __str__(self) -> str:
         return f"Payment #{self.pk} for Order #{self.order.pk}"  # type: ignore
-
     class Meta:
         verbose_name = "Payment"
         verbose_name_plural = "Payments"
         db_table = "payments"
 
-        indexes = [models.Index(fields=["id"])]
+        indexes = [
+            models.Index(fields=["id"]),
+            models.Index(fields=["paystack_refrence"])
+            ]
+
+    # def save(self, *args, **kwargs):
+    #     if not self.transaction_refrence:
+    #         self.transaction_refrence = gen_payment_ref()
+    #     super().save(*args, **kwargs)

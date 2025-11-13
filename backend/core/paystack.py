@@ -3,38 +3,45 @@ import requests
 
 class Paystack:
 	def __init__(self):
-		self.sk = settings.PAYSTACK_SECRET_KEY
-		return None
-	
-	def Initiate_transaction(self, user_email:str, amount:float):
-		url = "https://api.paystack.co/transaction/initialize"
+		# secret_key = settings.PAYSTACK_SECRET_KEY
+		self.base_url = "https://api.paystack.co/transaction"
+		self.headers = {
+			"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+			"Content-Type": "application/json",
+		}
+		return
 
-		headers = {
-			"Authorization": f"Bearer {self.sk}",
-			"Content-Type": "application/json"
+	def initialize_transaction(self, customer_email:str, amount:float):
+		url = f"{self.base_url}/initialize"
+		payload = {
+			"amount": f"{round(amount, 2) * 100}",
+			"email": customer_email,
+			"channels": ["card", "ussd", "bank_transfer"],
+			"currency": "NGN"
+		}
+		try:
+			response = requests.post(url=url, headers=self.headers, json=payload)
+			response.raise_for_status()
+			return response.json()
+		except Exception:
+			# log the exceptions
+
+			return {
+				"status": False,
+				"message": "Initialise Transaction Failed"
 			}
-		data = {
-			"email": f"{user_email}",
-			"amount": f"{round(amount * 100, 2)}",
-			"currency": "NGN",
-			}
-		response = requests.post(url, headers=headers, json=data)
-		return response
 	
 	def verify_transaction(self, ref_code):
-		url = f"https://api.paystack.co/transaction/verify/{ref_code}"
-		
-		headers = {
-			"Authorization": f"Bearer {self.sk}",
-			"Content-Type": "application/json"
-			}
-		response = requests.get(url=url, headers=headers)
-		
-		if response.status_code == 200:
-			response_data = response.json()
-			return response_data
-		return response.json()
-            
-    
+		url = f"{self.base_url}/verify/{ref_code}"
 
-    
+		try:
+			response = requests.get(url=url, headers=self.headers)
+			response.raise_for_status()
+			return response.json()
+		except Exception:
+			# log the exception
+			
+			return {
+				"status": False,
+				"message": "Verification failed"
+			}

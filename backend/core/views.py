@@ -1,4 +1,3 @@
-from pickle import GET
 from uuid import UUID
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
@@ -7,11 +6,13 @@ from rest_framework.decorators import api_view, permission_classes, parser_class
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from core.models import Cart, CartItem, Order, OrderItem, Product, ShippingAddress, Vendor
+from core.models import Cart, CartItem, Order, OrderItem, Payment, Product, ShippingAddress, Vendor
 from core.permissions import IsVendor
 from core.serializers import CartItemSerializer, OrderSerializer, ProductSerializer, RegisterSerializer, ShippingAddressSerializer, VendorSerializer
 from django.db import transaction
+from core.paystack import Paystack
 
+_paystack = Paystack()
 
 @api_view(["POST"])
 def register_user(request: Request) -> Response:
@@ -279,11 +280,41 @@ def initialize_payment(request: Request, orderId: UUID) -> Response:
     if order.status != Order.Status.Pending:
         return Response({"details": "Only pending orders can be paid for"}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Simulate payment initialization
-    order.payment_refrence = f"PAY-{order.id}"
-    order.transaction_refrence = f"TXN-{order.id}"
-    order.status = Order.Status.Processing
-    order.save()
+    # check whether stock still remains
 
-    serializer = OrderSerializer(order)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    # Simulate payment initialization
+    response = _paystack.initialize_transaction(request.user.email, order.total_amount)
+    if not response["status"]:
+        return Response(data=response, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    refrence = response["data"]["reference"]
+    with transaction.atomic():
+        order.status = Order.Status.Processing
+        Payment.objects.create(order=order, amount=order.total_amount, paystack_refrence=refrence, user=request.user)
+        order.save()
+    
+    return Response(data=response, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def verify_payment(request: Request, refrence: str):
+    if not refrence:
+        return Response({"details": "response code not found"}, status=400)
+    
+    response = _paystack.verify_transaction(refrence)
+    if not response["status"]:
+        return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        payment = Payment.objects.select_related("payments").get(paystack_refrence=refrence, user=request.user)
+    except Payment.DoesNotExist:
+        return Response({"details": f"Payment with the refrence{refrence} does no exist for you"})
+    
+    payment.order.status = Order.Status.Successful
+    payment.payment_status = Payment.Payment_Status.Successful
+    payment.save()
+
+    ## process shipping 
+    ## notify the customer
+    
+    return Response(data=response, status=status.HTTP_200_OK)
