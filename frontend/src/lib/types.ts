@@ -41,8 +41,8 @@ export interface Product {
   stock: number;
   description: string;
   is_on_flash_sales: boolean;
-  current_price: string;
-  old_price: string;
+  current_price: number;
+  old_price?: number;
   thumbnail: string;
   created_at: string;
   updated_at: string;
