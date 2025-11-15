@@ -1,13 +1,15 @@
 "use client";
-import axiosInstance from "@/lib/axios.config";
+import { axiosInstance, handleApiError } from "@/lib/axios.config";
 import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { set, z } from "zod";
-import { fi } from "zod/locales";
+import z from "zod";
+import { Input } from "../ui/input";
+import Image from "next/image";
+import { Button } from "../ui/button";
+import Link from "next/link";
 
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -26,6 +28,7 @@ const registerFormSchema = z
         /[^a-zA-Z0-9]/,
         "Password must contain at least one special character"
       ),
+
     confirm_password: z
       .string()
       .min(8, "Password must be at least 8 characters long"),
@@ -63,14 +66,24 @@ const registerFormSchema = z
 type RegisterSchema = z.infer<typeof registerFormSchema>;
 
 // component
-export default function RegisterForm() {
-  const [loading, setIsLoading] = useState(false);
+export function RegisterForm() {
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+    } else {
+      setPreview(null);
+    }
+  };
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    watch,
-    setError,
+    // watch,
+    // setError,
   } = useForm<RegisterSchema>({
     resolver: zodResolver(registerFormSchema),
   });
@@ -79,7 +92,6 @@ export default function RegisterForm() {
 
   async function onSubmit(data: RegisterSchema) {
     try {
-      setIsLoading(true);
       // get avatar
       const avatar = (data.avatar as FileList)[0];
 
@@ -91,32 +103,104 @@ export default function RegisterForm() {
       formData.append("avatar", avatar);
 
       // send request
-      const response = await axiosInstance.post(
-        "api/users/register",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      await axiosInstance.post("api/users/register", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       toast.success("Registration successful! login", {
         position: "top-right",
       });
       router.push("/auth/login");
     } catch (error) {
-      let errorMesssage;
-      if (axios.isAxiosError(error)) {
-        errorMesssage = error.response?.data;
-      } else {
-        errorMesssage = "Registration unsuccessfull";
-      }
+      const errorMesssage = handleApiError(error, "Registration failed");
       toast.error(errorMesssage, { position: "top-center" });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }
 
-  return ();
+  return (
+    <>
+      <form onSubmit={handleSubmit(onSubmit)} className="max-w-md mx-auto p-4">
+        <h2 className="text-xl font-semibold mb-4">Register</h2>
+
+        <label className="block mb-2">
+          <span className="block text-sm">Email</span>
+          <Input
+            type="email"
+            {...register("email")}
+            className="w-full border px-3 py-2 rounded"
+          />
+          {errors.email && (
+            <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
+          )}
+        </label>
+
+        <label className="block mb-2">
+          <span className="block text-sm">Password</span>
+          <Input
+            type="password"
+            {...register("password")}
+            className="w-full border px-3 py-2 rounded"
+          />
+          {errors.password && (
+            <p className="text-sm text-red-600 mt-1">
+              {errors.password.message}
+            </p>
+          )}
+        </label>
+
+        <label className="block mb-2">
+          <span className="block text-sm">Confirm Password</span>
+          <Input
+            type="password"
+            {...register("confirm_password")}
+            className="w-full border px-3 py-2 rounded"
+          />
+          {errors.confirm_password && (
+            <p className="text-sm text-red-600 mt-1">
+              {errors.confirm_password.message}
+            </p>
+          )}
+        </label>
+
+        <label className="block mb-4">
+          <span className="block text-sm">Avatar (JPG/PNG/WEBP, max 2MB)</span>
+          <Input
+            type="file"
+            accept="image/*"
+            {...(register("avatar"), handleFileChange)}
+          />
+          {errors.avatar && (
+            <p className="text-sm text-red-600 mt-1">
+              {errors.avatar.message as string}
+            </p>
+          )}
+        </label>
+
+        {preview && (
+          <div className="mb-4">
+            <span className="block text-sm">Preview</span>
+            <Image
+              src={preview}
+              alt="avatar preview"
+              className="w-24 h-24 object-cover rounded"
+            />
+          </div>
+        )}
+
+        {/* login */}
+        <div className="block mb-2">
+          <Link href={"/auth/login"}>Login</Link>
+        </div>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-4 py-2 rounded bg-blue-600 text-white"
+        >
+          {isSubmitting ? "Submitting..." : "Register"}
+        </Button>
+      </form>
+    </>
+  );
 }
