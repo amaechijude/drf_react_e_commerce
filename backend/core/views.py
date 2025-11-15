@@ -1,18 +1,34 @@
 from uuid import UUID
-from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from core.models import Cart, CartItem, Order, OrderItem, Payment, Product, ShippingAddress, Vendor
+from core.models import (
+    Cart,
+    CartItem,
+    Order,
+    OrderItem,
+    Payment,
+    Product,
+    ShippingAddress,
+    Vendor,
+)
 from core.permissions import IsVendor
-from core.serializers import CartItemSerializer, OrderSerializer, ProductSerializer, RegisterSerializer, ShippingAddressSerializer, VendorSerializer
+from core.serializers import (
+    CartItemSerializer,
+    OrderSerializer,
+    ProductSerializer,
+    RegisterSerializer,
+    ShippingAddressSerializer,
+    VendorSerializer,
+)
 from django.db import transaction
 from core.paystack import Paystack
 
 _paystack = Paystack()
+
 
 @api_view(["POST"])
 def register_user(request: Request) -> Response:
@@ -30,7 +46,9 @@ def register_user(request: Request) -> Response:
 def become_vendor(request: Request) -> Response:
     user = request.user
     if user.is_vendor:
-        return Response({"details":"User is already a vendor"}, status=status.HTTP_403_FORBIDDEN)
+        return Response(
+            {"details": "User is already a vendor"}, status=status.HTTP_403_FORBIDDEN
+        )
     serializer = VendorSerializer(data=request.data)
     if serializer.is_valid():
         user.is_vendor = True
@@ -49,12 +67,12 @@ def create_product(request: Request) -> Response:
         vendor = Vendor.objects.get(user=request.user)
     except Vendor.DoesNotExist:
         return Response({"details": "Only vendors can create products"}, status=400)
-    
+
     serializer = ProductSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save(vendor=vendor)
         return Response(data=serializer.data, status=201)
-    
+
     return Response(serializer.errors, status=400)
 
 
@@ -67,16 +85,17 @@ def update_product(request: Request, id: UUID):
         vendor = Vendor.objects.get(user=request.user)
     except (Product.DoesNotExist, Vendor.DoesNotExist) as e:
         return Response({"details": e}, status=404)
-    
+
     if product.vendor != vendor:
-        return Response({"details":"Unauthorised"}, status=403)
-    
+        return Response({"details": "Unauthorised"}, status=403)
+
     serializer = ProductSerializer(product, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=200)
-        
+
     return Response(serializer.errors, status=404)
+
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated, IsVendor])
@@ -86,20 +105,22 @@ def delete_product(request: Request, id: UUID):
         vendor = Vendor.objects.get(user=request.user)
     except (Product.DoesNotExist, Vendor.DoesNotExist):
         return Response({"details": "product not found"}, status=404)
-    
+
     if product.vendor != vendor:
-        return Response({"details":"Unauthorised"}, status=403)
-    
+        return Response({"details": "Unauthorised"}, status=403)
+
     product.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
-   
 
 
 @api_view(["GET"])
 def product_details(request: Request, id: UUID) -> Response:
-    product = get_object_or_404(Product, id=id)
-    psz = ProductSerializer(product)
-    return Response(data=psz.data, status=200)
+    try:
+        product = Product.objects.select_related("vendor").get(id=id)
+        psz = ProductSerializer(product)
+        return Response(data=psz.data, status=200)
+    except Product.DoesNotExist:
+        return Response({"details": "product not found"}, status=404)
 
 
 @api_view(["GET"])
@@ -133,7 +154,7 @@ def shipping_address_detail(request: Request, id: UUID) -> Response:
         address = ShippingAddress.objects.get(id=id, user=request.user)
     except ShippingAddress.DoesNotExist:
         return Response({"details": "Address not found"}, status=404)
-    
+
     if request.method == "GET":
         serializer = ShippingAddressSerializer(address)
         return Response(serializer.data, status=200)
@@ -146,11 +167,12 @@ def shipping_address_detail(request: Request, id: UUID) -> Response:
     if request.method == "DELETE":
         address.delete()
         return Response(status=204)
-    
+
     return Response({"details": "Method not allowed"}, status=405)
 
 
 # cart items and cart
+
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
@@ -186,7 +208,7 @@ def cart_item_detail(request: Request, id: UUID) -> Response:
     if request.method == "DELETE":
         cart_item.delete()
         return Response(status=204)
-    
+
     return Response({"details": "Method not allowed"}, status=405)
 
 
@@ -195,31 +217,36 @@ def cart_item_detail(request: Request, id: UUID) -> Response:
 @permission_classes([IsAuthenticated])
 def checkout(request: Request, ship_addr_Id: UUID) -> Response:
     try:
-        cart = Cart.objects.prefetch_related("carts").get(user = request.user)
+        cart = Cart.objects.prefetch_related("carts").get(user=request.user)
     except Cart.DoesNotExist:
         return Response({"details": "Cart not found"}, status=status.HTTP_404_NOT_FOUND)
-    
+
     cartitems = cart.cart_items.all()
     if cartitems.count() == 0:
         return Response({"details": "Cart is empty"}, status=status.HTTP_404_NOT_FOUND)
 
-    
     try:
         shipp_addr = ShippingAddress.objects.get(id=ship_addr_Id, user=request.user)
     except ShippingAddress.DoesNotExist:
-        return Response({"details": "Shipping address not found"}, status=status.HTTP_404_NOT_FOUND)
-    
+        return Response(
+            {"details": "Shipping address not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
     # Create the order and its items inside a transaction
     try:
         with transaction.atomic():
-            order = Order.objects.create(user=request.user, shipp_addr=shipp_addr, amount=0)
+            order = Order.objects.create(
+                user=request.user, shipp_addr=shipp_addr, amount=0
+            )
 
             # Create OrderItems from CartItems
             for ci in cartitems:
                 product = ci.product
                 if product.stock < ci.quantity:
                     # Out of stock; rollback
-                    raise ValueError(f"Product '{product.name}' does not have enough stock")
+                    raise ValueError(
+                        f"Product '{product.name}' does not have enough stock"
+                    )
 
                 order_item = OrderItem.objects.create(
                     product=product,
@@ -244,9 +271,12 @@ def checkout(request: Request, ship_addr_Id: UUID) -> Response:
 
     except ValueError as e:
         return Response({"details": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     except Exception:
-        return Response({"details": "Could not create order"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {"details": "Could not create order"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
     serializer = OrderSerializer(order)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -259,12 +289,17 @@ def list_orders(request: Request) -> Response:
     serializer = OrderSerializer(orders, many=True)
     return Response(serializer.data, status=200)
 
+
 @api_view(["GET"])
 def order_details(request: Request, orderId: UUID) -> Response:
     try:
-        order = Order.objects.prefetch_related("order_items").get(user=request.user, id=orderId)
+        order = Order.objects.prefetch_related("order_items").get(
+            user=request.user, id=orderId
+        )
     except Order.DoesNotExist:
-        return Response({"details": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"details": "Order not found"}, status=status.HTTP_404_NOT_FOUND
+        )
     serializer = OrderSerializer(order)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -275,23 +310,35 @@ def initialize_payment(request: Request, orderId: UUID) -> Response:
     try:
         order = Order.objects.get(user=request.user, id=orderId)
     except Order.DoesNotExist:
-        return Response({"details": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
-    
+        return Response(
+            {"details": "Order not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
     if order.status != Order.Status.Pending:
-        return Response({"details": "Only pending orders can be paid for"}, status=status.HTTP_400_BAD_REQUEST)
-    
+        return Response(
+            {"details": "Only pending orders can be paid for"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     # check whether stock still remains
 
     # Simulate payment initialization
-    response = _paystack.initialize_transaction(request.user.email, order.total_amount)
+    response = _paystack.initialize_transaction(
+        request.user.email, order.total_amount()
+    )
     if not response["status"]:
         return Response(data=response, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     refrence = response["data"]["reference"]
     with transaction.atomic():
         order.status = Order.Status.Processing
-        Payment.objects.create(order=order, amount=order.total_amount, paystack_refrence=refrence, user=request.user)
+        Payment.objects.create(
+            order=order,
+            amount=order.total_amount,
+            paystack_refrence=refrence,
+            user=request.user,
+        )
         order.save()
-    
+
     return Response(data=response, status=status.HTTP_200_OK)
 
 
@@ -300,21 +347,25 @@ def initialize_payment(request: Request, orderId: UUID) -> Response:
 def verify_payment(request: Request, refrence: str):
     if not refrence:
         return Response({"details": "response code not found"}, status=400)
-    
+
     response = _paystack.verify_transaction(refrence)
     if not response["status"]:
         return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
-    
+
     try:
-        payment = Payment.objects.select_related("payments").get(paystack_refrence=refrence, user=request.user)
+        payment = Payment.objects.select_related("payments").get(
+            paystack_refrence=refrence, user=request.user
+        )
     except Payment.DoesNotExist:
-        return Response({"details": f"Payment with the refrence{refrence} does no exist for you"})
-    
+        return Response(
+            {"details": f"Payment with the refrence{refrence} does no exist for you"}
+        )
+
     payment.order.status = Order.Status.Successful
     payment.payment_status = Payment.Payment_Status.Successful
     payment.save()
 
-    ## process shipping 
+    ## process shipping
     ## notify the customer
-    
+
     return Response(data=response, status=status.HTTP_200_OK)

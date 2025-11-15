@@ -9,8 +9,10 @@ from django.contrib.auth.models import (
 
 from django_resized import ResizedImageField
 
+
 def order_reference_gen():
     return f"TXN-{datetime.datetime.now()}-{uuid.uuid4()}"
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email: str, password=None, **extra_fields):
@@ -96,17 +98,15 @@ class Vendor(models.Model):
     Vendor Model representing a seller on the platform.
     """
 
-    id = models.CharField(
-        primary_key=True, default=f"vend-{uuid.uuid4}", editable=False, max_length=50
-    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
-    email = models.EmailField(unique=True)
+    brand_email = models.EmailField(unique=True)
     brand_name = models.CharField(max_length=128)
     avatar = ResizedImageField(
-        quality=75, size=[50, 50], upload_to="venders"
+        quality=75, size=[50, 50], upload_to="venders", null=True, blank=True
     )
     is_activated = models.BooleanField(default=False)
-    total_sales_ever = models.DecimalField(max_digits=20, decimal_places=2, default=0.00) # type: ignore
+    total_sales_ever = models.DecimalField(max_digits=20, decimal_places=2, default=0)  # type: ignore
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -114,14 +114,9 @@ class Vendor(models.Model):
     @property
     def is_diamond(self) -> bool:
         return self.total_sales_ever > DIAMOND_THRESHOLD
-    
-    def activate(self):
-        self.is_activated = True
-        self.user.is_vendor = True # type: ignore
-        self.user.is_customer = False # type: ignore
 
     def __str__(self) -> str:
-        return f"{self.brand_name} -> {self.email}"
+        return f"{self.brand_name} -> {self.brand_email}"
 
     class Meta:
         verbose_name_plural = "Vendors"
@@ -138,22 +133,28 @@ class Product(models.Model):
     description = models.TextField()
     is_on_flash_sales = models.BooleanField(default=False)
     current_price = models.DecimalField(max_digits=18, decimal_places=2)
-    old_price = models.DecimalField(max_digits=18, decimal_places=2)
-    thumbnail = ResizedImageField(null=False, blank=False, upload_to="products")
+    old_price = models.DecimalField(
+        max_digits=18, decimal_places=2, null=True, blank=True
+    )
+    thumbnail = ResizedImageField(
+        quality=75, null=False, blank=False, upload_to="products"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    @property
-    def is_in_stock(self) -> bool:
-        return self.stock >= 1
+    # @property
+    # def is_in_stock(self) -> bool:
+    #     return self.stock >= 1
 
-    @property
-    def percentage_diffrence(self):
-        old = self.old_price
-        current = self.current_price
-        if old >= current:
-            return ""
-        return ((old - current) / old) * 100
+    # @property
+    # def percentage_diffrence(self):
+    #     if not self.old_price:
+    #         return None
+    #     old = self.old_price
+    #     current = self.current_price
+    #     if old and old>= current:
+    #         return ""
+    #     return ((old - current) / old) * 100
 
     def __str__(self) -> str:
         return f"{self.name} -> {self.current_price}"
@@ -258,13 +259,13 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def _total_amount(self) -> float:
+    def total_amount(self) -> float:
         """Calculate total amount from order items"""
         return sum(item.sub_total for item in self.order_items.all())
 
     def save(self, *args, **kwargs):
         if self.pk:  # if order is already saved
-            self.amount = self._total_amount()
+            self.amount = self.total_amount()
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -314,6 +315,7 @@ class Payment(models.Model):
 
     def __str__(self) -> str:
         return f"Payment #{self.pk} for Order #{self.order.pk}"  # type: ignore
+
     class Meta:
         verbose_name = "Payment"
         verbose_name_plural = "Payments"
@@ -321,6 +323,5 @@ class Payment(models.Model):
 
         indexes = [
             models.Index(fields=["id"]),
-            models.Index(fields=["paystack_refrence"])
-            ]
-
+            models.Index(fields=["payment_refrence"]),
+        ]
