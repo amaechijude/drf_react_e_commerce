@@ -9,7 +9,7 @@ from django.contrib.auth.models import (
 
 from django_resized import ResizedImageField
 
-def gen_payment_ref():
+def order_reference_gen():
     return f"TXN-{datetime.datetime.now()}-{uuid.uuid4()}"
 
 class CustomUserManager(BaseUserManager):
@@ -76,10 +76,7 @@ class ShippingAddress(models.Model):
     state = models.CharField(max_length=150)
     lga = models.CharField(max_length=150)
     zip_code = models.CharField(max_length=10)
-
-    @property
-    def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
         return f"{self.user.email} -> {self.full_name}"  # type: ignore
@@ -109,7 +106,6 @@ class Vendor(models.Model):
         quality=75, size=[50, 50], upload_to="venders"
     )
     is_activated = models.BooleanField(default=False)
-
     total_sales_ever = models.DecimalField(max_digits=20, decimal_places=2, default=0.00) # type: ignore
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -245,31 +241,30 @@ class Order(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
-    shipp_addr = models.ForeignKey(
+    shipping_address = models.ForeignKey(
         ShippingAddress, on_delete=models.SET_NULL, null=True
     )
     status = models.CharField(max_length=12, choices=Status, default=Status.Pending)
     order_items = models.ManyToManyField(OrderItem, related_name="orders")
-    amount = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
-    payment_refrence = models.CharField(
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    order_refrence = models.CharField(
         max_length=50,
-        default=gen_payment_ref,
+        default=order_reference_gen,
         unique=True,
         editable=False,
         blank=False,
     )
-    transaction_refrence = models.CharField(max_length=300, blank=True)
+    payment_refrence = models.CharField(max_length=300, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    @property
-    def total_amount(self) -> float:
+    def _total_amount(self) -> float:
         """Calculate total amount from order items"""
         return sum(item.sub_total for item in self.order_items.all())
 
     def save(self, *args, **kwargs):
         if self.pk:  # if order is already saved
-            self.amount = self.total_amount
+            self.amount = self._total_amount()
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -310,7 +305,7 @@ class Payment(models.Model):
     payment_status = models.CharField(
         max_length=50, choices=Payment_Status.choices, default=Payment_Status.Initiated
     )
-    paystack_refrence = models.CharField(
+    payment_refrence = models.CharField(
         max_length=300, unique=True, editable=False, blank=True
     )
     is_verified = models.BooleanField(default=False)
@@ -329,7 +324,3 @@ class Payment(models.Model):
             models.Index(fields=["paystack_refrence"])
             ]
 
-    # def save(self, *args, **kwargs):
-    #     if not self.transaction_refrence:
-    #         self.transaction_refrence = gen_payment_ref()
-    #     super().save(*args, **kwargs)
