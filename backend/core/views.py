@@ -117,7 +117,7 @@ def delete_product(request: Request, id: UUID):
 def product_details(request: Request, id: UUID) -> Response:
     try:
         product = Product.objects.select_related("vendor").get(id=id)
-        psz = ProductSerializer(product)
+        psz = ProductSerializer(product, context={"request": request})
         return Response(data=psz.data, status=200)
     except Product.DoesNotExist:
         return Response({"details": "product not found"}, status=404)
@@ -126,7 +126,7 @@ def product_details(request: Request, id: UUID) -> Response:
 @api_view(["GET"])
 def list_products(request: Request) -> Response:
     products = Product.objects.select_related("vendor").all()
-    serializer = ProductSerializer(products, many=True)
+    serializer = ProductSerializer(products, many=True, context={"request": request})
     return Response(serializer.data, status=200)
 
 

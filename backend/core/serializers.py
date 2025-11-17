@@ -72,7 +72,8 @@ class RegisterSerializer(serializers.Serializer):
 class VendorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vendor
-        fields = "__all__"
+        # fields = "__all__"
+        exclude = ["user"]
         read_only_fields = [
             "id",
             "is_vendor",
@@ -96,7 +97,7 @@ class VendorSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    vendor = VendorSerializer
+    vendor = VendorSerializer(read_only=True)
 
     class Meta:
         model = Product
@@ -114,7 +115,8 @@ class ShippingAddressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShippingAddress
-        fields = "__all__"
+        # fields = "__all__"
+        exclude = ["user"]
         read_only_fields = ["id", "user"]
 
 

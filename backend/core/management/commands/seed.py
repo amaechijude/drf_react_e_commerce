@@ -1,4 +1,5 @@
 import os
+import random
 from django.core.files import File
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
@@ -42,40 +43,29 @@ class Command(BaseCommand):
                 ]
 
                 # Handle dummy images
-                seed_product_images_path = os.path.join(BASE_DIR, "images")
-                accepted_files = (".jpg", ".jpeg", ".avif", ".webp", ".png")
-                placeholder_images = []
-                for file in os.listdir(seed_product_images_path):
-                    if file.endswith(accepted_files):
-                        file_path = os.path.join(seed_product_images_path, file)
-                        placeholder_images.append(file_path)
-
-                # Increase the above image to 100
-                result = (placeholder_images * ((100 // len(placeholder_images)) + 1))[
-                    :100
-                ]
+                images_folder = os.path.join(BASE_DIR, "images")
+                placeholder_images = os.listdir(images_folder)
 
                 # create 100 products
-                for index, image_path in enumerate(result):
+                for index in range(100):
+                    img_name = random.choice(placeholder_images)
+                    image_path = os.path.join(images_folder, img_name)
+                    index = index + 1
                     vi = index % 2
                     stock = fake.random_int(50, 999)
                     price = float(fake.pricetag().replace(",", "_")[1:])
                     old_price = price + fake.random_int(100, 10_000)
-                    file_name = os.path.basename(image_path)
 
-                    product = Product(
-                        vendor=vendors[vi],
-                        name=f"Product {index + 1}",
-                        stock=stock,
-                        is_on_flash_sales=(index % 10 == 0) or (index % 15 == 0),
-                        current_price=price,
-                        old_price=old_price if (index % 7 == 0) else None,
-                    )
-
-                    with open(image_path, "rb") as f:
-                        product.thumbnail.save(file_name, File(f), save=True)
-
-                    product.save()
+                    with open(image_path, "rb") as img:
+                        Product.objects.create(
+                            vendor=vendors[vi],
+                            name=f"Product {index + 1}",
+                            stock=stock,
+                            is_on_flash_sales=(index % 10 == 0) or (index % 15 == 0),
+                            current_price=price,
+                            old_price=old_price if (index % 7 == 0) else None,
+                            thumbnail=File(img, name=img_name),
+                        )
 
                 self.stdout.write(self.style.SUCCESS("Data seeded successfully"))
         except Exception as e:

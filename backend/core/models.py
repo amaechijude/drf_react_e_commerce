@@ -1,4 +1,5 @@
 import datetime
+import os
 import uuid
 from django.db import models
 from django.contrib.auth.models import (
@@ -125,6 +126,11 @@ class Vendor(models.Model):
         indexes = [models.Index(fields=["id"])]
 
 
+def product_thumbail_path(instance, filename):
+    name, _ = os.path.splitext(filename)
+    return f"products/{name}.webp"
+
+
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="vendor")
@@ -137,7 +143,7 @@ class Product(models.Model):
         max_digits=18, decimal_places=2, null=True, blank=True
     )
     thumbnail = ResizedImageField(
-        quality=75, null=False, blank=False, upload_to="products"
+        quality=75, null=False, blank=False, upload_to=product_thumbail_path
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
