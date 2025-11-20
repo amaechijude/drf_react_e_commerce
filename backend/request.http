@@ -16,8 +16,8 @@ POST {{ecommer_HostAddress}}/token/
 Content-Type: application/json
 
 {
-	"email": "chioma@unn.edu.ng",
-	"password": "Password1@"
+	"email": "user2@gmail.com",
+	"password": "Password@2"
 }
 ###
 

@@ -36,13 +36,12 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       <div className="relative w-full h-96">
-        <Image
+        <img
           src={product.thumbnail}
           alt={product.name}
-          fill
-          sizes="(max-width: 768px) 100vw, 50vw"
-          className="rounded-lg object-contain"
-          priority
+          width={500}
+          height={500}
+          className="w-full h-full object-cover"
         />
       </div>
 
@@ -72,9 +71,9 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         <div className="flex items-center space-x-4 mb-6">
           <Button
             className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300"
-            disabled={!product.is_in_stock}
+            disabled={product.stock <= 0}
           >
-            {product.is_in_stock ? "Add to Cart" : "Out of Stock"}
+            {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
           </Button>
           {product.is_on_flash_sales && (
             <span className="bg-yellow-400 text-black px-3 py-1 rounded font-medium">
@@ -93,11 +92,9 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           <p>
             <strong>Status:</strong>{" "}
             <span
-              className={
-                product.is_in_stock ? "text-green-600" : "text-red-600"
-              }
+              className={product.stock > 0 ? "text-green-600" : "text-red-600"}
             >
-              {product.is_in_stock ? "In Stock" : "Out of Stock"}
+              {product.stock > 0 ? "In Stock" : "Out of Stock"}
             </span>
           </p>
         </div>

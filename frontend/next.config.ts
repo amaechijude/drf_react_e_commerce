@@ -6,7 +6,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "http",
-        hostname: process.env.NEXT_PUPLIC_API_URL as string,
+        hostname: "127.0.0.1",
+        port: "8000",
+        pathname: "/media/**",
       },
       {
         protocol: "https",

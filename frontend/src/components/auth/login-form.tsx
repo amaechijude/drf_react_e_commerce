@@ -1,14 +1,15 @@
 "use client";
 
-import { axiosInstance, handleApiError } from "@/lib/axios.config";
+import { baseUrl, handleApiError } from "@/lib/axios.config";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Spinner } from "../ui/spinner";
 
 const loginSchema = z.object({
   email: z.email(),
@@ -27,8 +28,8 @@ const loginSchema = z.object({
 type LoginSchema = z.infer<typeof loginSchema>;
 
 interface LoginUserResponse {
-  readonly access_token: string;
-  readonly refresh_token: string;
+  readonly access: string;
+  readonly refresh: string;
 }
 
 // Component
@@ -39,24 +40,28 @@ export function LoginForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    // watch,
-    // setError,
   } = useForm<LoginSchema>({ resolver: zodResolver(loginSchema) });
 
   const onSubmit = async (data: LoginSchema) => {
     try {
-      const response = await axiosInstance.post<LoginUserResponse>(
-        "api/users/login",
-        data,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-      localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("refresh_token", response.data.refresh_token);
+      const response = await fetch(`${baseUrl}/api/token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error("Login failed");
+      }
+      const responseData: LoginUserResponse = await response.json();
+      localStorage.setItem("access", responseData.access);
+      localStorage.setItem("refresh", responseData.refresh);
       toast.success("Login successful", { position: "top-right" });
 
-      router.push("/");
+      setTimeout(() => {
+        router.push("/");
+      }, 1_500);
     } catch (err) {
       const errorMesssage = handleApiError(err, "Login failed");
       toast.error(errorMesssage, { position: "top-center" });
@@ -95,16 +100,14 @@ export function LoginForm() {
         </label>
         {/* sign up */}
         <div className="block mb-2">
-            <Link
-            href={"/auth/register"}
-            >Register</Link>
+          <Link href={"/auth/register"}>Register</Link>
         </div>
         <Button
           type="submit"
           disabled={isSubmitting}
           className="px-4 py-2 rounded bg-blue-600 text-white"
         >
-          {isSubmitting ? "Submitting..." : "Register"}
+          {isSubmitting ? <Spinner /> : "Login"}
         </Button>
       </form>
     </>

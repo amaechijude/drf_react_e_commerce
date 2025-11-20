@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "../ui/button";
 
 export function NavBar() {
@@ -20,6 +21,18 @@ export function NavBar() {
           <a href="#" className="text-gray-600 hover:text-blue-500">
             Contact
           </a>
+          <Link
+            href={"/auth/register"}
+            className="text-gray-600 hover:text-blue-500"
+          >
+            Register
+          </Link>
+          <Link
+            href={"/auth/login"}
+            className="text-gray-600 hover:text-blue-500"
+          >
+            Login
+          </Link>
         </div>
         <div className="flex items-center space-x-4">
           <Button className="text-gray-600 hover:text-blue-500">

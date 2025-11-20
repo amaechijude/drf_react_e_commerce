@@ -35,7 +35,7 @@ def register_user(request: Request) -> Response:
     user_serializer = RegisterSerializer(data=request.data)
     if user_serializer.is_valid(raise_exception=True):
         user_serializer.save()
-        return Response(user_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_201_CREATED)
 
     return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -114,6 +114,13 @@ def delete_product(request: Request, id: UUID):
 
 
 @api_view(["GET"])
+def list_products(request: Request) -> Response:
+    products = Product.objects.select_related("vendor").all()
+    serializer = ProductSerializer(products, many=True, context={"request": request})
+    return Response(serializer.data, status=200)
+
+
+@api_view(["GET"])
 def product_details(request: Request, id: UUID) -> Response:
     try:
         product = Product.objects.select_related("vendor").get(id=id)
@@ -121,13 +128,6 @@ def product_details(request: Request, id: UUID) -> Response:
         return Response(data=psz.data, status=200)
     except Product.DoesNotExist:
         return Response({"details": "product not found"}, status=404)
-
-
-@api_view(["GET"])
-def list_products(request: Request) -> Response:
-    products = Product.objects.select_related("vendor").all()
-    serializer = ProductSerializer(products, many=True, context={"request": request})
-    return Response(serializer.data, status=200)
 
 
 @api_view(["GET", "POST"])

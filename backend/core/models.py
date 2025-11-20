@@ -148,26 +148,17 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # @property
-    # def is_in_stock(self) -> bool:
-    #     return self.stock >= 1
-
-    # @property
-    # def percentage_diffrence(self):
-    #     if not self.old_price:
-    #         return None
-    #     old = self.old_price
-    #     current = self.current_price
-    #     if old and old>= current:
-    #         return ""
-    #     return ((old - current) / old) * 100
-
     def __str__(self) -> str:
         return f"{self.name} -> {self.current_price}"
 
     class Meta:
         db_table = "products"
         indexes = [models.Index(fields=["id"])]
+
+    def save(self, *args, **kwargs):
+        if self.current_price > 1:
+            self.old_price = self.current_price
+        super().save(*args, **kwargs)
 
 
 class CartItem(models.Model):
