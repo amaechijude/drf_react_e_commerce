@@ -1,7 +1,11 @@
+"use client";
 import Link from "next/link";
 import { Button } from "../ui/button";
+import { useAuth } from "@/hook/use-auth";
 
 export function NavBar() {
+  const { user, isLoggedIn, logout } = useAuth();
+
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
       <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -12,7 +16,7 @@ export function NavBar() {
           <a href="#" className="text-gray-600 hover:text-blue-500">
             Home
           </a>
-          <a href="#" className="text-gray-600 hover:text-blue-500">
+          <a href="product" className="text-gray-600 hover:text-blue-500">
             Shop
           </a>
           <a href="#" className="text-gray-600 hover:text-blue-500">
@@ -21,18 +25,41 @@ export function NavBar() {
           <a href="#" className="text-gray-600 hover:text-blue-500">
             Contact
           </a>
-          <Link
-            href={"/auth/register"}
-            className="text-gray-600 hover:text-blue-500"
-          >
-            Register
-          </Link>
-          <Link
-            href={"/auth/login"}
-            className="text-gray-600 hover:text-blue-500"
-          >
-            Login
-          </Link>
+          {isLoggedIn ? (
+            <div>
+              <span className="text-gray-800">Hello, {user?.email}</span>
+              <Link
+                href="/profile"
+                className="ml-4 text-blue-600 hover:underline"
+              >
+                {user?.avatar && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.avatar}
+                    alt="Avatar"
+                    className="inline-block h-6 w-6 rounded-full mr-2"
+                  />
+                )}
+                Profile
+              </Link>
+              <Button onClick={logout}>Logout</Button>
+            </div>
+          ) : (
+            <div>
+              <Link
+                href={"/auth/register"}
+                className="text-gray-600 hover:text-blue-500"
+              >
+                Register
+              </Link>
+              <Link
+                href={"/auth/login"}
+                className="text-gray-600 hover:text-blue-500"
+              >
+                Login
+              </Link>
+            </div>
+          )}
         </div>
         <div className="flex items-center space-x-4">
           <Button className="text-gray-600 hover:text-blue-500">

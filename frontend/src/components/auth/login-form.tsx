@@ -1,6 +1,5 @@
 "use client";
 
-import { baseUrl, handleApiError } from "@/lib/axios.config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -10,6 +9,7 @@ import { Input } from "../ui/input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Spinner } from "../ui/spinner";
+import { useAuth } from "@/hook/use-auth";
 
 const loginSchema = z.object({
   email: z.email(),
@@ -25,17 +25,13 @@ const loginSchema = z.object({
     ),
 });
 
-type LoginSchema = z.infer<typeof loginSchema>;
-
-interface LoginUserResponse {
-  readonly access: string;
-  readonly refresh: string;
-}
+export type LoginSchema = z.infer<typeof loginSchema>;
 
 // Component
 
 export function LoginForm() {
   const router = useRouter();
+  const { login } = useAuth();
   const {
     register,
     handleSubmit,
@@ -44,27 +40,14 @@ export function LoginForm() {
 
   const onSubmit = async (data: LoginSchema) => {
     try {
-      const response = await fetch(`${baseUrl}/api/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        throw new Error("Login failed");
-      }
-      const responseData: LoginUserResponse = await response.json();
-      localStorage.setItem("access", responseData.access);
-      localStorage.setItem("refresh", responseData.refresh);
+      await login(data);
       toast.success("Login successful", { position: "top-right" });
 
       setTimeout(() => {
         router.push("/");
       }, 1_500);
-    } catch (err) {
-      const errorMesssage = handleApiError(err, "Login failed");
-      toast.error(errorMesssage, { position: "top-center" });
+    } catch {
+      toast.error("Login Failed", { position: "top-center" });
     }
   };
 

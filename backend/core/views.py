@@ -1,4 +1,6 @@
 from uuid import UUID
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.decorators import api_view, permission_classes, parser_classes
@@ -38,6 +40,94 @@ def register_user(request: Request) -> Response:
         return Response(status=status.HTTP_201_CREATED)
 
     return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+def login(request) -> Response:
+    email = request.data.get("email")
+    password = request.data.get("password")
+    user = authenticate(request, email=email, password=password)
+    if user is None:
+        return Response(
+            {"details": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    data = {
+        "id": user.id,  # type: ignore
+        "email": user.email,
+    }  # type: ignore
+
+    refresh = RefreshToken.for_user(user)
+    access_token = str(refresh.access_token)
+    refresh_token = str(refresh)
+
+    response = Response(data=data, status=status.HTTP_200_OK)
+
+    # Set HTTP-only cookies
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,  # True in production
+        # samesite=None,
+        max_age=300,  # 5 minutes
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,
+        # samesite="Lax",
+        max_age=7 * 24 * 60 * 60,  # 7 days
+    )
+    return response
+
+
+@api_view(["POST"])
+def logout_view(request):
+    response = Response(
+        {"detail": "Logged out successfully"}, status=status.HTTP_200_OK
+    )
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return response
+
+
+@api_view(["POST"])
+def refresh_view(request):
+    refresh_token = request.COOKIES.get("refresh_token")
+    if not refresh_token:
+        return Response(
+            {"detail": "Refresh token missing"}, status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    try:
+        refresh = RefreshToken(refresh_token)
+        access_token = str(refresh.access_token)
+
+        response = Response({"detail": "Token refreshed"}, status=status.HTTP_200_OK)
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=False,
+            samesite="Lax",
+            max_age=300,
+        )
+        return response
+    except Exception:
+        return Response(
+            {"detail": "You need to login again"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_view(request):
+    user = request.user
+    data = {"id": user.id, "email": user.email}
+    return Response(data=data, status=200)
 
 
 @api_view(["POST"])

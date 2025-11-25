@@ -1,30 +1,17 @@
 "use client";
-import { axiosInstance, handleApiError } from "@/lib/axios.config";
+import { axiosInstance } from "@/lib/axios.config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Input } from "../ui/input";
-import Image from "next/image";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { RegisterSchema, registerFormSchema } from "@/lib/schema";
 import { Spinner } from "../ui/spinner";
-import { useState } from "react";
 
 // component
 export function RegisterForm() {
-  const [preview, setPreview] = useState<string | null>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPreview(URL.createObjectURL(file));
-    } else {
-      setPreview(null);
-    }
-  };
-
   const {
     register,
     handleSubmit,
@@ -35,17 +22,7 @@ export function RegisterForm() {
 
   async function onSubmit(data: RegisterSchema) {
     try {
-      // build form data
-      const formData = new FormData();
-
-      formData.append("email", data.email);
-      formData.append("password", data.password);
-      formData.append("confirm_password", data.confirm_password);
-
-      // send request
-      await axiosInstance.post("api/users", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await axiosInstance.post("api/users", data);
 
       toast.success("Registration successful! login", {
         position: "top-right",
@@ -54,8 +31,8 @@ export function RegisterForm() {
       setTimeout(() => {
         router.push("/auth/login");
       }, 2_000);
-    } catch (error) {
-      const errorMesssage = handleApiError(error, "Registration failed");
+    } catch {
+      const errorMesssage = "Registration failed";
       toast.error(errorMesssage, { position: "top-center" });
     }
   }
@@ -106,37 +83,6 @@ export function RegisterForm() {
           </p>
         )}
       </label>
-
-      <label className="block mb-4">
-        <span className="block text-sm">Avatar (JPG/PNG/WEBP, max 2MB)</span>
-        <Input
-          type="file"
-          accept="image/*"
-          {...register("avatar", {
-            onChange: (e) => {
-              handleFileChange(e);
-            },
-          })}
-        />
-        {errors.avatar && (
-          <p className="text-sm text-red-600 mt-1">
-            {errors.avatar.message as string}
-          </p>
-        )}
-      </label>
-
-      {preview && (
-        <div className="mb-4">
-          <span className="block text-sm">Preview</span>
-          <Image
-            src={preview}
-            alt="avatar preview"
-            height={400}
-            width={400}
-            className="w-24 h-24 object-cover rounded"
-          />
-        </div>
-      )}
 
       {/* login */}
       <div className="block mb-2">

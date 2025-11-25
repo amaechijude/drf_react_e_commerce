@@ -12,7 +12,7 @@ Content-Type: application/json
 ###
 
 # Login User
-POST {{ecommer_HostAddress}}/token/
+POST {{ecommer_HostAddress}}/auth/login
 Content-Type: application/json
 
 {
@@ -22,9 +22,8 @@ Content-Type: application/json
 ###
 
 # Get Current User
-GET {{ecommer_HostAddress}}/user/me
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYxMjMwMzY4LCJpYXQiOjE3NjEyMjkxNjgsImp0aSI6ImNkY2FlZWNlYzcxODQzNzdiODYxYTViNWQ2MmIxZjdkIiwidXNlcl9pZCI6ImYwZTFjN2FkLTM1NWEtNDdjMi04NDIwLTE2Y2M5OTE4OGNmZSJ9.esFXX0Va16k1t58sTzwXDFy6TDS9ujb99gMi1A4BJGo
-
+GET {{ecommer_HostAddress}}/auth/user
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0MTYxNzgzLCJpYXQiOjE3NjQwNzUzODMsImp0aSI6ImQ2OGMyNzQ3YWMzYTRkOTdhNWZhMjdhYWQ3MTdlNDEzIiwidXNlcl9pZCI6ImRmYTY3ODc1LTI4MjctNDIwMC1hZTA0LWVkNDdhOWE2ZmQ2MyJ9.B_UFIUCvJCz7rIobB05w7U3OBUeFsUFaJVIab6MUUgA
 ###
 
 GET {{ecommer_HostAddress}}/vendor-only
@@ -32,7 +31,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiY
 
 ###
 
-GET {{ecommer_HostAddress}}/product/all
+GET {{ecommer_HostAddress}}/products/all
 Content-Type: application/json
 
 ###

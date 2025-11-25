@@ -11,3 +11,12 @@ export const formatPriceToNaira = (price: number) => {
     currency: "NGN",
   });
 };
+
+// export   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const file = e.target.files?.[0];
+//     if (file) {
+//       setPreview(URL.createObjectURL(file));
+//     } else {
+//       setPreview(null);
+//     }
+//   };

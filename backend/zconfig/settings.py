@@ -14,6 +14,7 @@ from datetime import timedelta
 import os
 from pathlib import Path
 from decouple import config
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -60,7 +61,11 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
+CORS_ALLOW_HEADERS = (*default_headers, "Access-Control-Allow-Credentials")
+CORS_ALLOW_CREDENTIALS = True
 
+SESSION_COOKIE_SECURE = False  # True in production (HTTPS)
+CSRF_COOKIE_SECURE = False  # True in production
 
 ROOT_URLCONF = "zconfig.urls"
 
@@ -126,6 +131,13 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
+    # HTTP only cookies
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_COOKIE": "access_token",  # Cookie name for access token
+    "AUTH_COOKIE_REFRESH": "refresh_token",  # Cookie name for refresh token
+    "AUTH_COOKIE_HTTP_ONLY": True,
+    "AUTH_COOKIE_SECURE": False,
+    "AUTH_COOKIE_SAMESITE": "Lax",
 }
 
 # Internationalization

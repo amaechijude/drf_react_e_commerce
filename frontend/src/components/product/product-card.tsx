@@ -49,7 +49,8 @@ function ProductCardComponent({ product }: ProductCardProps) {
           </div>
         )}
 
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={product.thumbnail}
           alt={product.name}
           width={300}
