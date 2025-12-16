@@ -118,8 +118,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ShippingAddressSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
-
     class Meta:
         model = ShippingAddress
         # fields = "__all__"

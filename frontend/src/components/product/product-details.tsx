@@ -1,16 +1,31 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatPriceToNaira } from "@/lib/utils";
-import Image from "next/image";
+// import Image from "next/image";
 import { Product } from "@/lib/types";
+import { axiosInstance } from "@/lib/axios.config";
+import { toast } from "sonner";
+import { Input } from "../ui/input";
 
 interface ProductDetailsProps {
   product: Product;
 }
 
 export function ProductDetails({ product }: ProductDetailsProps) {
+  const [count, setCount] = useState(1);
+
+  const handleAddToCart = async (productId: string) => {
+    try {
+      await axiosInstance.post(`api/cart/add/${productId}`, { count });
+      toast.success("Product added to cart");
+    } catch (error) {
+      console.error("Error adding product to cart:", error);
+      toast.error("Failed to add product to cart");
+    }
+  };
+
   // Memoize expensive calculations
   const formattedCurrentPrice = useMemo(
     () => formatPriceToNaira(product.current_price),
@@ -36,6 +51,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       <div className="relative w-full h-96">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={product.thumbnail}
           alt={product.name}
@@ -72,9 +88,18 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           <Button
             className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300"
             disabled={product.stock <= 0}
+            onClick={() => handleAddToCart(product.id)}
           >
             {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
           </Button>
+
+          <Input
+            type="number"
+            min="1"
+            value={count}
+            disabled={product.stock <= 0}
+            onChange={(e) => setCount(parseInt(e.target.value))}
+          />
           {product.is_on_flash_sales && (
             <span className="bg-yellow-400 text-black px-3 py-1 rounded font-medium">
               Flash Sale

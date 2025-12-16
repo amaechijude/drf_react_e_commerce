@@ -41,12 +41,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "gunicorn",
+    # custom
+    "core",
     # Third party package
     "rest_framework",
     "corsheaders",
     "rest_framework_simplejwt",
-    # custom
-    "core",
+    "rest_framework_simplejwt.token_blacklist",  # For logout functionality
 ]
 
 MIDDLEWARE = [
@@ -61,7 +63,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
-CORS_ALLOW_HEADERS = (*default_headers, "Access-Control-Allow-Credentials")
+CORS_ALLOW_HEADERS = default_headers
 CORS_ALLOW_CREDENTIALS = True
 
 SESSION_COOKIE_SECURE = False  # True in production (HTTPS)
@@ -90,14 +92,23 @@ WSGI_APPLICATION = "zconfig.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": config("DATABASE_ENGINE"),
+        "NAME": config("DATABASE_NAME"),
+        "USER": config("DATABASE_USER"),
+        "PASSWORD": config("DATABASE_PASSWORD"),
+        "HOST": config("DATABASE_HOST"),
+        "PORT": config("DATABASE_PORT", cast=int),
     }
 }
-
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -120,6 +131,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Rest Framework Configuration
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        "core.auth_middleware.JWTCookieAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     )
 }
@@ -128,6 +140,8 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=2),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
@@ -138,6 +152,7 @@ SIMPLE_JWT = {
     "AUTH_COOKIE_HTTP_ONLY": True,
     "AUTH_COOKIE_SECURE": False,
     "AUTH_COOKIE_SAMESITE": "Lax",
+    "JTI_CLAIM": "jti",
 }
 
 # Internationalization

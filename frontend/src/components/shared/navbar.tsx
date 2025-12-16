@@ -1,10 +1,13 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { useAuth } from "@/hook/use-auth";
 
 export function NavBar() {
   const { user, isLoggedIn, logout } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
@@ -32,14 +35,6 @@ export function NavBar() {
                 href="/profile"
                 className="ml-4 text-blue-600 hover:underline"
               >
-                {user?.avatar && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={user.avatar}
-                    alt="Avatar"
-                    className="inline-block h-6 w-6 rounded-full mr-2"
-                  />
-                )}
                 Profile
               </Link>
               <Button onClick={logout}>Logout</Button>
@@ -94,8 +89,69 @@ export function NavBar() {
               ></path>
             </svg>
           </Button>
+          <button
+            className="md:hidden text-gray-600 hover:text-blue-500 focus:outline-none ml-4"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
       </nav>
+      {isMenuOpen && (
+        <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-4">
+          <a href="#" className="block text-gray-600 hover:text-blue-500">
+            Home
+          </a>
+          <a href="product" className="block text-gray-600 hover:text-blue-500">
+            Shop
+          </a>
+          <a href="#" className="block text-gray-600 hover:text-blue-500">
+            About
+          </a>
+          <a href="#" className="block text-gray-600 hover:text-blue-500">
+            Contact
+          </a>
+          {isLoggedIn ? (
+            <div className="pt-4 border-t border-gray-100">
+              <div className="flex items-center mb-4">
+                {user?.avatar && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.avatar}
+                    alt="Avatar"
+                    className="h-8 w-8 rounded-full mr-2"
+                  />
+                )}
+                <span className="text-gray-800">{user?.email}</span>
+              </div>
+              <Link
+                href="/profile"
+                className="block text-blue-600 hover:underline mb-2"
+              >
+                Profile
+              </Link>
+              <Button onClick={logout} className="w-full">
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col space-y-2 pt-4 border-t border-gray-100">
+              <Link
+                href={"/auth/register"}
+                className="block text-gray-600 hover:text-blue-500"
+              >
+                Register
+              </Link>
+              <Link
+                href={"/auth/login"}
+                className="block text-gray-600 hover:text-blue-500"
+              >
+                Login
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 }

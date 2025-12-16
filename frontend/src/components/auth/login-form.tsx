@@ -7,7 +7,6 @@ import z from "zod";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Spinner } from "../ui/spinner";
 import { useAuth } from "@/hook/use-auth";
 
@@ -30,7 +29,6 @@ export type LoginSchema = z.infer<typeof loginSchema>;
 // Component
 
 export function LoginForm() {
-  const router = useRouter();
   const { login } = useAuth();
   const {
     register,
@@ -43,9 +41,7 @@ export function LoginForm() {
       await login(data);
       toast.success("Login successful", { position: "top-right" });
 
-      setTimeout(() => {
-        router.push("/");
-      }, 1_500);
+      window.location.href = "/";
     } catch {
       toast.error("Login Failed", { position: "top-center" });
     }

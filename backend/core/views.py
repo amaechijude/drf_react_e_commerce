@@ -1,6 +1,4 @@
 from uuid import UUID
-from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.decorators import api_view, permission_classes, parser_classes
@@ -22,7 +20,6 @@ from core.serializers import (
     CartItemSerializer,
     OrderSerializer,
     ProductSerializer,
-    RegisterSerializer,
     ShippingAddressSerializer,
     VendorSerializer,
 )
@@ -30,104 +27,6 @@ from django.db import transaction
 from core.paystack import Paystack
 
 _paystack = Paystack()
-
-
-@api_view(["POST"])
-def register_user(request: Request) -> Response:
-    user_serializer = RegisterSerializer(data=request.data)
-    if user_serializer.is_valid(raise_exception=True):
-        user_serializer.save()
-        return Response(status=status.HTTP_201_CREATED)
-
-    return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(["POST"])
-def login(request) -> Response:
-    email = request.data.get("email")
-    password = request.data.get("password")
-    user = authenticate(request, email=email, password=password)
-    if user is None:
-        return Response(
-            {"details": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
-        )
-
-    data = {
-        "id": user.id,  # type: ignore
-        "email": user.email,
-    }  # type: ignore
-
-    refresh = RefreshToken.for_user(user)
-    access_token = str(refresh.access_token)
-    refresh_token = str(refresh)
-
-    response = Response(data=data, status=status.HTTP_200_OK)
-
-    # Set HTTP-only cookies
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=False,  # True in production
-        # samesite=None,
-        max_age=300,  # 5 minutes
-    )
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=False,
-        # samesite="Lax",
-        max_age=7 * 24 * 60 * 60,  # 7 days
-    )
-    return response
-
-
-@api_view(["POST"])
-def logout_view(request):
-    response = Response(
-        {"detail": "Logged out successfully"}, status=status.HTTP_200_OK
-    )
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
-    return response
-
-
-@api_view(["POST"])
-def refresh_view(request):
-    refresh_token = request.COOKIES.get("refresh_token")
-    if not refresh_token:
-        return Response(
-            {"detail": "Refresh token missing"}, status=status.HTTP_401_UNAUTHORIZED
-        )
-
-    try:
-        refresh = RefreshToken(refresh_token)
-        access_token = str(refresh.access_token)
-
-        response = Response({"detail": "Token refreshed"}, status=status.HTTP_200_OK)
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,
-            secure=False,
-            samesite="Lax",
-            max_age=300,
-        )
-        return response
-    except Exception:
-        return Response(
-            {"detail": "You need to login again"},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def user_view(request):
-    user = request.user
-    data = {"id": user.id, "email": user.email}
-    return Response(data=data, status=200)
 
 
 @api_view(["POST"])
@@ -264,21 +163,39 @@ def shipping_address_detail(request: Request, id: UUID) -> Response:
 # cart items and cart
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def cart_items(request: Request) -> Response:
     user = request.user
-    if request.method == "GET":
-        cart_items = user.cart.cart_items.all()
-        serializer = CartItemSerializer(cart_items, many=True)
-        return Response(serializer.data, status=200)
-    elif request.method == "POST":
-        serializer = CartItemSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=user)
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
-    return Response({"details": "Method not allowed"}, status=405)
+    cart_items = user.cart.cart_items.all()
+    serializer = CartItemSerializer(cart_items, many=True)
+    return Response(serializer.data, status=200)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def add_to_cart(request: Request, productId: UUID) -> Response:
+    try:
+        product = Product.objects.get(id=productId)
+    except Product.DoesNotExist:
+        return Response({"details": "Product not found"}, status=404)
+
+    if product.stock <= 0:
+        return Response({"details": "Product is out of stock"}, status=400)
+
+    count = request.data.get("quantity", 1)  # type: ignore
+    with transaction.atomic():
+        cart_item, created = CartItem.objects.get_or_create(
+            product=product, quantity=count
+        )
+        if not created:
+            cart_item.quantity += int(count)
+            cart_item.save()
+
+        cart, _ = Cart.objects.get_or_create(user=request.user)
+        cart.cart_items.add(cart_item)
+        return Response({"details": "Product added to cart"}, status=200)
+    return Response({"details": "Could not add to cart"}, status=500)
 
 
 @api_view(["GET", "PUT", "DELETE"])
@@ -368,8 +285,22 @@ def checkout(request: Request, ship_addr_Id: UUID) -> Response:
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    serializer = OrderSerializer(order)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    # serializer = OrderSerializer(order)
+    response = _paystack.initialize_transaction(
+        request.user.email, order.total_amount()
+    )
+    if not response["status"]:
+        return Response(data=response, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    refrence = response["data"]["reference"]
+    with transaction.atomic():
+        order.status = Order.Status.Processing
+        Payment.objects.create(
+            order=order,
+            amount=order.total_amount,
+            paystack_refrence=refrence,
+            user=request.user,
+        )
+    return Response(data=response, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])
@@ -410,9 +341,6 @@ def initialize_payment(request: Request, orderId: UUID) -> Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # check whether stock still remains
-
-    # Simulate payment initialization
     response = _paystack.initialize_transaction(
         request.user.email, order.total_amount()
     )

@@ -1,5 +1,5 @@
 import { axiosInstance } from "./axios.config";
-import { Product } from "./types";
+import { Cart, Product } from "./types";
 
 export async function GetProductDetails(
   id: string
@@ -23,14 +23,15 @@ export async function GetAllProductDetails(): Promise<Product[] | undefined> {
   }
 }
 
-// categories
-export const getCategories = async (
-  slug: string
-): Promise<Product[] | undefined> => {
+export async function getUserCart() : Promise<Cart | undefined> {
   try {
-    const response = await axiosInstance.get(`/api/categories/${slug}/`);
-    return response.data;
-  } catch {
+    const response = await axiosInstance.get("api/carts");
+    console.log(response)
+    // if (response.data)
+    return response.data
+  }
+  catch(error) {
+    console.log(error)
     return undefined;
   }
-};
+}

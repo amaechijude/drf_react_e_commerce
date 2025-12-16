@@ -9,7 +9,6 @@ export interface User {
 
 export interface ShippingAddress {
   id: string;
-  user?: User;
   first_name: string;
   last_name: string;
   phone: string;

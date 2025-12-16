@@ -82,7 +82,7 @@ class ShippingAddress(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"{self.user.email} -> {self.full_name}"  # type: ignore
+        return f"{self.user.email} -> {self.first_name}"  # type: ignore
 
     class Meta:
         verbose_name_plural = "Shipping Addresses"
@@ -163,7 +163,6 @@ class Product(models.Model):
 
 class CartItem(models.Model):
     id = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="cart_items"
     )
@@ -175,7 +174,7 @@ class CartItem(models.Model):
         return self.quantity * float(self.product.current_price)
 
     def __str__(self) -> str:
-        return f"CartItem: {self.product_id} for {self.user.email}"  # type: ignore
+        return f"CartItem: {self.product.id}"  # type: ignore
 
     class Meta:
         verbose_name_plural = "Cart Items"

@@ -21,9 +21,13 @@ Content-Type: application/json
 }
 ###
 
+POST {{ecommer_HostAddress}}/auth/logout
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0MTc5Nzc3LCJpYXQiOjE3NjQwOTMzNzcsImp0aSI6ImI1OGFkMjI5YjY5ODRhOTBhYzlkMzY1MTE2ZjBjZDBmIiwidXNlcl9pZCI6IjUyNmI3Y2M4LTM1YjYtNDUzMi1iNWZjLTE3Y2FiNzY5NzYxYyJ9.jqjrYEW6n7wKg8JNH1d2voIZjlL56JkbUp5Zstadb90
+###
+
 # Get Current User
 GET {{ecommer_HostAddress}}/auth/user
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0MTYxNzgzLCJpYXQiOjE3NjQwNzUzODMsImp0aSI6ImQ2OGMyNzQ3YWMzYTRkOTdhNWZhMjdhYWQ3MTdlNDEzIiwidXNlcl9pZCI6ImRmYTY3ODc1LTI4MjctNDIwMC1hZTA0LWVkNDdhOWE2ZmQ2MyJ9.B_UFIUCvJCz7rIobB05w7U3OBUeFsUFaJVIab6MUUgA
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0MTc5Nzc3LCJpYXQiOjE3NjQwOTMzNzcsImp0aSI6ImI1OGFkMjI5YjY5ODRhOTBhYzlkMzY1MTE2ZjBjZDBmIiwidXNlcl9pZCI6IjUyNmI3Y2M4LTM1YjYtNDUzMi1iNWZjLTE3Y2FiNzY5NzYxYyJ9.jqjrYEW6n7wKg8JNH1d2voIZjlL56JkbUp5Zstadb90
 ###
 
 GET {{ecommer_HostAddress}}/vendor-only
@@ -35,3 +39,12 @@ GET {{ecommer_HostAddress}}/products/all
 Content-Type: application/json
 
 ###
+
+GET {{ecommer_HostAddress}}/products/details/4c62943f-e12f-4297-915d-9ef1f0281d7c
+###
+
+GET {{ecommer_HostAddress}}/health
+
+###
+GET {{ecommer_HostAddress}}/carts
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY1OTcyMjE4LCJpYXQiOjE3NjU4ODU4MTgsImp0aSI6IjQ3M2U1Y2M1MWY5ZTRlNjNiZTAxNmJmMTZjNjc1OGU4IiwidXNlcl9pZCI6IjdmMzUxMjk5LTdlNmUtNGQ0MC1hYmNiLTBmODgxODVkMzBkYSJ9.FjXupel5qTqu1rF9fRWApZSfvaRQEfZJRItowf26HvI

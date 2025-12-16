@@ -1,9 +1,7 @@
-// components/product/product-card.tsx
 "use client";
 
 import { memo, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Product } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { formatPriceToNaira } from "@/lib/utils";
